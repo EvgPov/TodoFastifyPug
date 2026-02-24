@@ -1,0 +1,42 @@
+doctype html
+html(lang="ru")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title= title
+    link(rel="stylesheet" href="/public/css/fonts.css")
+    link(rel="stylesheet" href="/public/css/style.css")
+  body
+    if message 
+      div(class=`message message-${messageType}`)
+        = message
+        button.message-close(onclick="this.parentElement.remove()") ×
+      
+    h1=title
+    .add-form
+      form#task-form
+        input(type="text" name="title" placeholder=". . ." required)
+        button(type="submit") Добавить
+
+    if tasks.length === 0
+      p Пока задач нет
+    
+    ul.task-list#task-list
+      each task in tasks
+        li.task-item(data-id=task.id)
+          .task-content
+            span.task-text(class={ 'completed': task.completed } data-title=task.title)= task.title
+          input.task-checkbox(type="checkbox" checked=task.completed)
+          a.delete-link(
+            href=`#`
+            title="Удалить задачу"
+            data-id=task.id
+            data-title=task.title
+            )
+            img.delete-icon(
+              src="/public/images/trash-bin-trash-svgrepo-com.svg"
+              alt="Удалить"
+              width="24"
+              height="24"
+            )
+  script(src="/public/scripts/add-task.js")

@@ -1,0 +1,11 @@
+@font-face {
+  font-family: 'MyFontRegular';
+  src: url('../fonts/Montserrat-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyFontBold';
+  src: url('../fonts/Montserrat-Bold.ttf') format('truetype');
+  font-display: swap;
+}
