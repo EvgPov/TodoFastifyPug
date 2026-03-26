@@ -1,7 +1,7 @@
 body {
   font-family: 'MyFontRegular';
-  max-width: 800px;
-  margin: 40px auto;
+  max-width: 700px;
+  margin: 120px auto;
   padding: 0 20px;
   background: #f9f9f9;
 }
@@ -10,6 +10,77 @@ h1 {
   font-family: 'MyFontBold';
   text-align: center;
   color: #333;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 40px;
+  gap: 20px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  color: #1f2937;
+  text-align: center;
+  flex: 1;
+}
+
+.add-task-group {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  margin: 30px auto;
+  max-width: 700px;
+}
+
+.add-task-group form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.add-task-group input {
+  flex: 1;
+  padding: 16px 20px;
+  font-size: 1.1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  background: #f9fafb;
+  font-family: 'MyFontRegular';
+}
+
+.add-task-group input:focus {
+  outline: none;
+  border-color: #4361ee;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1);
+}
+
+.add-task-group button {
+  padding: 16px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: #4361ee;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.25);
+  font-family: 'MyFontBold';
+}
+
+.add-task-group button:hover {
+  background: #3b4fd6;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(67, 97, 238, 0.35);
 }
 
 .task-list {
@@ -25,8 +96,10 @@ h1 {
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  cursor: pointer;
   transition: all 0.3s ease;
+  align-items: flex-start;   /* важно для многострочного текста */
+  gap: 12px;
 }
 
 .task-item:hover {
@@ -36,15 +109,38 @@ h1 {
   padding: 18px;
   margin: 14px 0;
 }
+
 .task-item:hover .task-text {
-  font-family: 'MyFontBold';      /* Жирный шрифт */
-  font-weight: bold;              /* Дополнительная жирность */
-  color: #1a3d7c;                 /* Темно-синий цвет текста */
-  font-size: 1.15rem;             /* Чуть увеличиваем размер */
+  font-family: 'MyFontBold';      
+  font-weight: bold;              
+  color: #1a3d7c;                
+  font-size: 1.15rem;            
 }
+
 .task-text {
   flex: 1;
   font-size: 1.1rem;
+  line-height: 1.45;
+  transition: all 0.2s ease;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  line-clamp: 2;
+  overflow: hidden;
+  
+  word-break: break-word;
+}
+
+.task-text[title] {
+  position: relative;
+}
+
+.task-text:hover {
+  background: rgba(67, 97, 238, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 
 .delete-link {
@@ -57,9 +153,12 @@ h1 {
   padding: 6px 12px;
   border: none;
   transition: all 0.2s;
+  background: none;
+  cursor: pointer;
 }
 
-.delete-link:hover {
+.delete-link:hover,
+.logout-btn:hover {
   border: 2px solid #b1bae2;
   border-radius: 6px;
 }
@@ -69,16 +168,29 @@ h1 {
   text-align: center;
 }
 
-input[type="text"] {
-  padding: 12px;
-  width: 300px;
+/* .auth-container input[type="text"],
+.auth-container input[type="password"] {
+  width: 100%;
   max-width: 100%;
+  padding: 14px 16px;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 6px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: white;
+  font-family: 'MyFontRegular';
+} */
+
+/* .auth-container input[type="text"]:focus,
+.auth-container input[type="password"]:focus {
+  outline: none;
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  background: white;
 }
 
-button {
+.auth-container button {
   font-family: 'MyFontBold';
   padding: 12px 24px;
   font-size: 1rem;
@@ -88,11 +200,13 @@ button {
   border-radius: 6px;
   cursor: pointer;
   margin-left: 12px;
-}
+  transition: background 0.3s ease;
+  margin-top: 10px;
+} */
 
-button:hover {
+/* .auth-container button:hover {
   background: #0f36e1;
-}
+} */
 
 p.empty {
   text-align: center;
@@ -101,65 +215,77 @@ p.empty {
 }
 
 .message {
-  padding: 15px 20px;
-  border-radius: 8px;
-  margin: 20px 0;
-  text-align: center;
-  font-family: 'MyFontBold';
-  position: relative;
-  animation: slideDown 0.3s ease;
+  font-family: 'MyFontRegular';
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  min-width: 320px;
+  padding: 14px 58px 14px 20px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  animation: slideDown 0.4s ease forwards;
+  color: white;
+  box-sizing: border-box;
 }
 
 .message-success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  background-color: #4caf50;
 }
 
 .message-error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+  background-color: #f44336;
 }
 
 .message-info {
-  background: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
-}
-
-.message-close {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: inherit;
-  padding: 0 5px;
+  background-color: #2196f3;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translate(-50%, -30px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, 0);
   }
 }
 
-.task-edit-input {
-  width: 100%;
-  padding: 4px 8px;
-  font-size: 1.1rem;
-  border: 1px solid #4361ee;
-  border-radius: 4px;
-  outline: none;
-  box-sizing: border-box;
+.message-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 15px;
+  opacity: 0.9;
+
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  transform: translateY(-50%);
+
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+  width: 34px;     
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-close:hover {
+  opacity: 1;
+  background: none;
+  font-size: 28px;
+  transform: translateY(-50%) scale(1.25);
 }
 
 .task-text.editing {
@@ -177,4 +303,71 @@ p.empty {
   text-decoration: line-through;
   color: #888;
   opacity: 0.8;
+}
+
+.logout-btn {
+  background: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  background: none;
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+} 
+
+.logout-btn img {
+  transition: transform 0.3s ease;
+  filter: brightness(0.85);
+}
+
+.task-edit-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  font-family: 'MyFontRegular';
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: #1a3d7c;
+  background: #f0f7ff;
+  border: 2px solid #4361ee;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 85px;
+}
+
+.task-edit-textarea:focus {
+  outline: none;
+  border-color: #3b4fd6;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.2);
+}
+
+.task-edit-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: 'MyFontRegular';
+  font-size: 1.1rem;
+  color: #1a3d7c;
+  background: #f0f7ff;
+  border: 2px solid #4361ee;
+  border-radius: 6px;
+}
+
+.task-edit-input:focus-visible,
+.task-edit-input:focus {
+  outline: none;
+  border-color: #3b4fd6;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
 }

@@ -6,37 +6,34 @@ html(lang="ru")
     title= title
     link(rel="stylesheet" href="/public/css/fonts.css")
     link(rel="stylesheet" href="/public/css/style.css")
+
   body
-    if message 
+    if message
       div(class=`message message-${messageType}`)
         = message
         button.message-close(onclick="this.parentElement.remove()") ×
-      
-    h1=title
-    .add-form
-      form#task-form
-        input(type="text" name="title" placeholder=". . ." required)
-        button(type="submit") Добавить
+    .header
+      h1=title
+      //- if token
+        button.logout-btn
 
-    if tasks.length === 0
-      p Пока задач нет
-    
-    ul.task-list#task-list
-      each task in tasks
-        li.task-item(data-id=task.id)
-          .task-content
-            span.task-text(class={ 'completed': task.completed } data-title=task.title)= task.title
-          input.task-checkbox(type="checkbox" checked=task.completed)
-          a.delete-link(
-            href=`#`
-            title="Удалить задачу"
-            data-id=task.id
-            data-title=task.title
-            )
-            img.delete-icon(
-              src="/public/images/trash-bin-trash-svgrepo-com.svg"
-              alt="Удалить"
-              width="24"
-              height="24"
-            )
-  script(src="/public/scripts/add-task.js")
+    // Форма добавления задачи — только для авторизованных
+    if token
+      .add-task-group
+        form#task-form
+          input(type="text" name="title" placeholder=". . ." required)
+          button(type="submit") Добавить
+    else
+      p.unauthorized
+        | Чтобы добавлять и просматривать задачи, 
+        a(href="/login") войдите в аккаунт
+        |  или 
+        a(href="/register") зарегистрируйтесь
+
+    // Список задач — только для авторизованных
+    if token
+      ul.task-list#task-list
+    else
+      p Для просмотра задач необходимо войти в систему
+
+    script(type="module" src="/public/scripts/add-task.js")

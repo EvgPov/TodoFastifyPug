@@ -1,7 +1,8 @@
 interface Task {
   id: string,
   title: string,
-  completed: boolean
+  completed: boolean;
+  userId: string;
 }
 
 interface AddTaskBody {
@@ -10,7 +11,7 @@ interface AddTaskBody {
 
 interface UpdateTaskBody {
   title?: string;
-  completed: boolean; 
+  completed?: boolean; 
 }
 
 interface DeleteTaskType {
@@ -21,4 +22,9 @@ interface UpdateTaskType {
   id: string 
 }
 
-export { Task, AddTaskBody, UpdateTaskBody, DeleteTaskType, UpdateTaskType }
+interface User {
+  id: string,
+  username: string,
+  password: string
+}
+export { Task, AddTaskBody, UpdateTaskBody, DeleteTaskType, UpdateTaskType, User }
