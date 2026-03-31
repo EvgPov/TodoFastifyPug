@@ -35,17 +35,24 @@ async function fetchWithAuth(url, options = {}) {
     throw new Error("No token")
   }
 
-  options = {
-    ...options,
-    credentials: 'include', // отправлять cookies
-    headers: {
-      ...options.headers,
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}` // Bearer из localStorage
-    }
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
   };
 
-  const res = await fetch(url, options)
+  if (!headers['Content-Type'] && 
+      options.body && 
+      !['GET', 'DELETE', 'HEAD'].includes((options.method || 'GET').toUpperCase())) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const fetchOptions = {
+    ...options,
+    credentials: 'include',
+    headers
+  };
+
+  const res = await fetch(url, fetchOptions)
 
   if (res.status === 401) {
     // Очищаем оба хранилища
@@ -224,7 +231,8 @@ document.getElementById('task-list').addEventListener('click', async function(ev
   if (!confirm(`Вы уверены, что хотите удалить задачу "${title}"?`)) return
   try {
     const response = await fetchWithAuth (`/tasks/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {}
     })
     if (response.ok) {
       link.closest('li').remove()

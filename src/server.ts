@@ -65,11 +65,6 @@ const authPreHandler = async (request: any, reply: any) => {
     return reply.code(401).send({ error: "Токен обязателен" });
   }
 
-  // const auth = request.headers.authorization
-  // if (!auth || !auth.startsWith("Bearer ")) {
-  //   return reply.code(401).send({error: "Токен обязателен (Bearer)"})
-  // }
-  // const token = auth.slice(7)
   const userId = getUserIdByToken(token)
   if (!userId) {
     return reply.code(401).send({error: "Неверный токен"})
@@ -109,7 +104,7 @@ fastify.post("/login", async (request, reply) => {
 fastify.get("/login", async(_, reply) => reply.view("login", { title: "Авторизация"}))
 fastify.get("/register", async(_, reply) => reply.view("register", { title: "Регистрация"}))
 fastify.get("/", async(request, reply) => {
-  // const auth = request.headers.authorization
+ 
   let token: string | null = null
   // Проверяем query-параметр (после редиректа из логина)
   if (typeof request.query === 'object' && request.query !== null) {
