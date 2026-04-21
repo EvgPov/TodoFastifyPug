@@ -1,37 +1,52 @@
-import type { User } from "../types/types.ts";
-import {v4 as uuidv4} from 'uuid';
 import bcrypt from "bcrypt";
+import pool from '../db.ts'
 
-let users: User[] = []
+async function registerUser(username: string, password: string):Promise<void> {
+  const client = await pool.connect()
 
-const toketStore = new Map<string, string>()
+  try {
+    // проверяем существования пользователя
+    const existing = await client.query(`
+      SELECT id
+      FROM public.users
+      WHERE username = $1`,
+    [username.toLowerCase()])
 
-async function registerUser(username: string, password: string){
-  if (users.some(user => user.username.toLowerCase() === username.toLowerCase())) {
-    throw new Error("Пользователь с таким именем уже существует");
+    if (existing.rows.length > 0) {
+      throw new Error('Пользователь с таким именем уже существует')
+    }
+    // хешируем пароль
+    const hashedPassword = await bcrypt.hash(password, 10)
+    // добавляем нового пользователя
+    await client.query(`
+      INSERT INTO public.users (username, password) VALUES ($1, $2)`,
+    [username.toLowerCase(), hashedPassword])
+  } finally {
+    client.release()
   }
-  const hashedPassword = await bcrypt.hash(password, 10)
-  const newUser: User = {
-    id: uuidv4(),
-    username,
-    password: hashedPassword
+}
+
+async function loginUser(username: string, password: string): Promise<number | null> {
+  const client = await pool.connect()
+  // получаем пользователя по имени
+  try {
+    const result = await client.query(
+      `SELECT id, username, password
+       FROM public.users
+       WHERE username = $1`,
+       [username.toLowerCase()]
+    )
+
+    const user = result.rows[0]
+    if (!user) return null
+    // если пользователь зарегистрирован, то проверяем пароль
+    const match = await bcrypt.compare(password, user.password)
+    if (!match) return null
+    // возвращаем ID пользовател
+    return user.id
+  } finally {
+    client.release()
   }
-  users.push(newUser);
-  return newUser
 }
 
-async function loginUser(username: string, password: string): Promise<string | null> {
-  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase())
-  if (!user) return null
-  const match = await bcrypt.compare(password, user.password)
-  if (!match) return null
-  const token = uuidv4()
-  toketStore.set(token, user.id)
-  return token
-}
-
-function getUserIdByToken(token: string): string | undefined {
-  return toketStore.get(token)
-}
-
-export { registerUser, loginUser, getUserIdByToken }
+export { registerUser, loginUser}

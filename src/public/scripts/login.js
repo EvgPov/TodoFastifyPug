@@ -26,13 +26,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) throw new Error(data.error || "Неверный логин или пароль");
 
-      localStorage.setItem("token", data.token);
-
-      document.cookie = `token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+      if (data.token) {
+        document.cookie = `token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        console.log("Token saved to cookie");
+      }  
       
       showMessage("Вход выполнен успешно! Загружаем задачи...", "success");
 
-      setTimeout(() => window.location.href = `/?token=${encodeURIComponent(data.token)}`, 2000);
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
 
     } catch (err) {
       showMessage(err.message, "error");

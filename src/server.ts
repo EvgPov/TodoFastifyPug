@@ -3,15 +3,19 @@ import fastifyView from '@fastify/view'; // плагин, который доб�
 import fastifyStatic from '@fastify/static'; // для раздачи CSS/шрифтов/картинок
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import fastifyFormbody from '@fastify/formbody';
+import fastifyJwt from "@fastify/jwt";
 import pug from 'pug'; // шаблонизатор для Node.js
 import path from 'path'; // модуль, который предоставляет утилиты для работы с путями к файлам и директориям
 import { fileURLToPath } from 'url';
 import type { Task, AddTaskBody, DeleteTaskType } from './types/types.ts'
-import { registerUser, loginUser, getUserIdByToken } from "./data/users.ts";
+import { registerUser, loginUser } from "./data/users.ts";
 import { addTask, getTasksByUser, deleteTaskById, updateTask } from './data/tasks.ts'
+
 // Helper to get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const fastify = Fastify({ logger: true });
 
 // Регистрируем CORS
@@ -24,7 +28,7 @@ fastify.register(fastifyCors, {
 fastify.register(fastifyCookie, {
   secret: "your-secret-key-change-this-in-production", // для подписи cookies
   parseOptions: {
-    httpOnly: true,
+    httpOnly: false,
     secure: false, // для разработки
     sameSite: 'lax',
     path: '/'
@@ -40,56 +44,79 @@ fastify.register(fastifyView, {
   propertyName: 'view', // The method name added to the reply object (default is 'view')
   viewExt: 'pug', // The file extension for your templates
 });
+
 // Раздача статических файлов (css, js, img и т.д.)
 fastify.register(fastifyStatic, {
   root: path.join(__dirname, 'public'),
   prefix: '/public/',
 });
-// request —что прислал клиент
+
+// Подключаем парсер для формы (для распознавания Content-Type: application/x-www-form-urlencoded)
+fastify.register(fastifyFormbody);
+
+// JWT
+fastify.register(fastifyJwt, {
+  secret: process.env.JWT_SECRET || 'секретный_ключ',
+  sign: {
+    expiresIn: '7d'
+  }
+})
+// схема валидации
+const userDataSchema = {
+  type: 'object',
+  required: ['username', 'password'],
+  properties: {
+    username: { type: 'string', minLength: 2, maxLength: 100},
+    password: { type: 'string', minLength: 8, maxLength: 100, pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$'},
+  },
+  additionalProperties: false
+}
+
+// request — что прислал клиент
 // reply — что сервер отвечает
 const authPreHandler = async (request: any, reply: any) => {
-  let token: string | null = null;
-
-  // Сначала проверяем Authorization header (из localStorage)
-  const auth = request.headers.authorization;
-  if (auth && auth.startsWith("Bearer ")) {
-    token = auth.slice(7);
-  }
-
-  // Если нет в header, проверяем cookies
-  if (!token && request.cookies && request.cookies.token) {
-    token = request.cookies.token;
-  }
-
-  if (!token) {
-    return reply.code(401).send({ error: "Токен обязателен" });
-  }
-
-  const userId = getUserIdByToken(token)
-  if (!userId) {
-    return reply.code(401).send({error: "Неверный токен"})
-  }
-    request.userId = userId
-    request.token = token;
+  try {
+  // fastify-jwt автоматически проверяет токен из заголовка Authorization: Bearer ...
+    await request.jwtVerify()
+    request.userId = request.user.userId
+ } catch (error) {
+  return reply.code(401).send({error: 'Неверный или истекший токен'})
+ }
 }
-fastify.post("/register", async (request, reply) => {
+
+// ROUTERS
+fastify.post("/register", { schema: { body: userDataSchema } }, async (request, reply) => {
   const { username, password } = request.body as { username: string, password: string}
-  if (!username || !password) return reply.code(400).send({error: "Заполните все поля"})
+
+  if (!username || !password) {
+    return reply.code(400).send({error: "Заполните все поля"})
+  }  
   try {
   await registerUser(username, password)
-  return reply.code(201).send({ seccess: true, message: "Регистрация успешна!"})
+  return reply.code(201).send({ success: true, message: "Регистрация успешна!"})
     } catch (err: any) {
   return reply.code(400).send({ error: err.message})
   }
 })
+
 fastify.post("/login", async (request, reply) => {
   const { username, password } = request.body as { username: string, password: string}
-  if (!username || !password) return reply.code(400).send({error: "Заполните все поля"})
-  const token = await loginUser(username, password)
-  if (!token) return reply.code(401).send({ error: "Неверный логин или пароль"})
 
+  if (!username || !password) {
+    return reply.code(400).send({error: "Заполните все поля"})
+  }
+
+  const userId = await loginUser(username, password)
+
+  if (!userId) {
+    return reply.code(401).send({ error: "Неверный логин или пароль"})
+  }  
+// генерация токена
+  const token = await reply.jwtSign ({
+    userId: userId
+  })
     reply.setCookie('token', token, {
-    httpOnly: true,    // Защита от XSS
+    httpOnly: false,    // Защита от XSS
     secure: false,    
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60, // 7 дней
@@ -98,59 +125,55 @@ fastify.post("/login", async (request, reply) => {
 
   return reply.send({ 
     token,
-    userId: getUserIdByToken(token),
-    message: "Вход выполнен"})
+    message: "Вход выполнен успешно"})
 })
 fastify.get("/login", async(_, reply) => reply.view("login", { title: "Авторизация"}))
 fastify.get("/register", async(_, reply) => reply.view("register", { title: "Регистрация"}))
+
 fastify.get("/", async(request, reply) => {
- 
-  let token: string | null = null
-  // Проверяем query-параметр (после редиректа из логина)
-  if (typeof request.query === 'object' && request.query !== null) {
-    const q = request.query as Record<string, string>;
-    if (q.token) {
-      token = q.token;
-    }
-  }
-  // Если токена нет в query — проверяем заголовок
-  if (!token && request.headers.authorization?.startsWith("Bearer ")) {
-    token = request.headers.authorization.slice(7);
-  }
+   const token = request.cookies?.token || null
+
   return reply.view("index", {
     title: "Список задач",
-    tasks: [],
     token: token,
     message: null,
     messageType: "info"
   })
 })
+
+// TASKS
 fastify.get("/tasks", { preHandler: authPreHandler }, async (request, reply) => {
   const userId = (request as any).userId
-  return reply.send(getTasksByUser(userId))
+  const tasks = await getTasksByUser(userId)
+  return reply.send(tasks)
 });
+
 fastify.post('/tasks', { preHandler: authPreHandler }, async(request, reply) => {
   const body = request.body as AddTaskBody
   const userId = (request as any).userId
+
   if (!body?.title?.trim()) return reply.code(400).send({ error: "Название обязательно"})
-  const newTask = addTask(body.title.trim(), userId)
-  return reply.code(201).send( { seccess: true, task: newTask })
+
+  const newTask = await addTask(body.title.trim(), userId)
+  return reply.code(201).send( { success: true, task: newTask })
 })
+
 fastify.put('/tasks/:id', { preHandler: authPreHandler }, async(request, reply) => {
   const { id } = request.params as { id: string}
   const userId = (request as any).userId
   const updates = request.body as Partial<Task>
-  const updated = updateTask(id, updates, userId)
+
+  const updated = await updateTask(Number(id), updates, userId)
   if (!updated) return reply.code(404).send({ error: "Задача не найдена или нет доступа"})
   return reply.send(updated)
  })
+
 fastify.delete('/tasks/:id', { preHandler: authPreHandler }, async(request, reply) => {
   const { id } = request.params as DeleteTaskType
   const userId = (request as any).userId
-  if (!userId) {
-    return reply.code(401).send({ error: 'Пользователь не авторизован'})
-  }
-  const deleted = deleteTaskById(id, userId)
+
+  const deleted = await deleteTaskById(Number(id), userId)
+
   if (!deleted) {
     return reply
       .code(404)
@@ -161,6 +184,59 @@ fastify.delete('/tasks/:id', { preHandler: authPreHandler }, async(request, repl
     .code(204)
     .send()
 })
+// обработчик ошибок, которе возникают во время обработки запроса
+// метод, который замняет стандартный обработчк Fastify на кастомный
+fastify.setErrorHandler((error: unknown, request, reply) => {
+  if (error instanceof Error && 'validation' in error && Array.isArray((error as any).validation)) {
+    const validationError = error as {validation: any[]}
+  
+  let messageError = '';
+
+    validationError.validation.forEach((err: any) => {
+      const field = err.instancePath ? err.instancePath.slice(1) : (err.params?.missingProperty || '')
+
+      if (field === 'username') {
+        if (err.keyword === 'required') {
+          messageError += 'Имя пользователя — обязательное поле.\n';
+        } else if (err.keyword === 'minLength') {
+          messageError += 'Имя пользователя должно содержать минимум 2 символа.\n';
+        }
+      }
+      if (field === 'password') {
+        if (err.keyword === 'required') {
+          messageError += 'Пароль — обязательное поле.\n';
+        } else if (err.keyword === 'minLength') {
+          messageError += 'Пароль должен содержать минимум 8 символов.\n';
+        } else if (err.keyword === 'pattern') {
+          messageError += 'Пароль должен содержать заглавные и строчные буквы, а также хотя бы одну цифру.\n';
+        }
+      }
+    });
+    // Если нет конкретных сообщений — общее
+    if (!messageError) {
+      messageError = 'Проверьте введённые данные и попробуйте снова.';
+    }
+// рендер шаблона с ошибкой
+    return reply.view('register', {
+      title: 'Регистрация пользователя',
+      error: messageError.trim(),
+      username: (request.body as any)?.username || '',
+      password: (request.body as any)?.password|| '',
+      success: null,
+    });
+  }
+
+  // Другие ошибки
+  fastify.log.error(error);
+  return reply.status(500).view('add-car', {
+    title: 'Добавить автомобиль',
+    error: 'Внутренняя ошибка сервера. Попробуйте позже.',
+    username: '',
+    password: '',
+    success: null,
+  });
+});
+
 // Start the server
 const start = async () => {
   try {

@@ -11,8 +11,20 @@ body.auth-page
   .auth-container
     h1= title
     form#register-form
-      input(type="text" name="username" placeholder="Имя пользователя" required)
-      input(type="password" name="password" placeholder="Пароль" required)
+      input(type="text"
+            name="username"
+            placeholder="Имя пользователя"
+            minlength="2"
+            maxlength="100"
+            auticomplete="username"
+            required)
+      input(type="password"
+            name="password"
+            placeholder="Пароль"
+            required
+            minlength="8"
+            maxlength="100"
+            auticomplete="new-password")
       button(type="submit") Зарегистрироваться
     p Уже есть аккаунт? <a href="/login">Войти</a>
   script(type="module" src="/public/scripts/register.js")

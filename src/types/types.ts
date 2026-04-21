@@ -1,30 +1,31 @@
 interface Task {
-  id: string,
+  id: number,
   title: string,
   completed: boolean;
-  userId: string;
+  user_id: number;
+  created_at?: string
 }
 
 interface AddTaskBody {
   title?: string
 }
 
-interface UpdateTaskBody {
-  title?: string;
-  completed?: boolean; 
-}
+// interface UpdateTaskBody {
+//   title?: string;
+//   completed?: boolean; 
+// }
 
 interface DeleteTaskType {
   id: string 
 }
 
-interface UpdateTaskType {
-  id: string 
-}
+// interface UpdateTaskType {
+//   id: string 
+// }
 
-interface User {
-  id: string,
-  username: string,
-  password: string
-}
-export { Task, AddTaskBody, UpdateTaskBody, DeleteTaskType, UpdateTaskType, User }
+// interface User {
+//   id: number,
+//   username: string,
+//   password: string
+// }
+export { Task, AddTaskBody, DeleteTaskType }

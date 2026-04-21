@@ -12,17 +12,14 @@ function shortenText(text, maxLength = MAX_MESSAGE_LENGTH) {
 }
 
 function getToken() {
-  // Сначала проверяем localStorage
-  const localToken = localStorage.getItem("token");
-  if (localToken) return localToken;
-  
-  // Если нет, пробуем получить из cookie
   const cookies = document.cookie.split('; ');
   const tokenCookie = cookies.find(row => row.startsWith('token='));
   if (tokenCookie) {
-    return tokenCookie.split('=')[1];
+    const token = tokenCookie.split('=')[1];
+    console.log("Token from cookie:", token ? "exists" : "not found");
+    return token;
   }
-  
+  console.log("No token found");
   return null;
 }
 
@@ -56,7 +53,6 @@ async function fetchWithAuth(url, options = {}) {
 
   if (res.status === 401) {
     // Очищаем оба хранилища
-    localStorage.removeItem("token")
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     
     showMessage("Сессия истекла. Войдите снова", "error")
@@ -74,21 +70,24 @@ async function fetchWithAuth(url, options = {}) {
     const messageDiv = document.createElement('div')
     messageDiv.className = `message message-${type}`
     messageDiv.innerHTML = `
-      ${text}
-      <button class="message-close" onclick="this.parentElement.remove()">×</button>
+        <span>${text}</span>
+        <button class="message-close">×</button>
     `
     document.body.appendChild(messageDiv)
-// сообщение исчезает через 5 секунд, если пользователь не закрыл сообщение
+// сообщение исчезает через 3 секунды, если пользователь не закрыл сообщение
     messageDiv.timer = setTimeout(() => {
-      messageDiv.remove()
+       if (messageDiv && messageDiv.remove) messageDiv.remove()
     }, 3000)
+
 // пользователь закрывает  сообщение
     const closeBtn = messageDiv.querySelector('.message-close')
-    closeBtn.addEventListener('click', () => {
-      clearTimeout(messageDiv.timer)
-      messageDiv.remove()
-    }, {once: true})
-  }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        if (messageDiv.timer) clearTimeout(messageDiv.timer)
+        messageDiv.remove()
+      })
+    }
+  }  
 
 function createTaskElement(task) {
   const li = document.createElement('li')
@@ -147,16 +146,19 @@ async function loadTasks() {
         ul.append(li)
       })
     }
-  } catch(error) {}
+  } catch(error) {
+    console.error("Ошибка загрузки задач:", error)
+  }
 }
 function logout() {
-  localStorage.removeItem("token")
+  document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   window.location.href = "/login"
 }
 // только для  страницы Todo
 document.addEventListener('DOMContentLoaded', () => {
 const taskForm = document.getElementById('task-form')
 if (!taskForm) return // если мы на register/login, то выходим
+
 // кнопка выхода
 const h1 = document.querySelector("h1")
 if (h1 && h1.parentElement.classList.contains('header')) {
@@ -173,12 +175,8 @@ const token = getToken()
 if (token) {
   loadTasks()
 } else {
-  const urlParams = new URLSearchParams(window.location.search)
-  const tokenFromUrl = urlParams.get('token')
-  if (tokenFromUrl) {
-    localStorage.setItem("token", tokenFromUrl)
-    setTimeout(() => loadTasks(), 100) // чуть-чуть задержим, чтобы localStorage успел обновиться
-  }
+  console.log("No token, redirecting to login")
+  window.location.href = "/login"
 }
 // добавление задачи
 taskForm.addEventListener('submit', async(event) => { 
